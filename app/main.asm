@@ -15,10 +15,44 @@
 
 RESET       mov.w   #__STACK_END,SP         ; Initialize stack pointer
 
+;------------------------------------------------------------------------------
+;           Constants
+;------------------------------------------------------------------------------
+SDA_PIN .equ BIT0
+SCL_PIN .equ BIT2
+SDA_OUT .equ P6OUT
+SCL_OUT .equ P6OUT
+SDA_DIR .equ P6DIR
+SCL_DIR .equ P6DIR  
 
 init:
             ; stop watchdog timer
             mov.w   #WDTPW+WDTHOLD,&WDTCTL
+            
+SetupSCLSDA            
+            mov.b   #00h, &P1SEL0           ; sets to digital IO
+            mov.b   #00h, &P1SEL1
+
+            bis.b   #SDA_PIN, SDA_DIR       ; set SDA and SCL as output
+            bis.b   #SCL_PIN, SCL_DIR 
+            bis.b   #SDA_PIN, SDA_OUT       ; set SDA and SCL to High
+            bis.b   #SCL_PIN, SCL_OUT
+
+SetupP2     bic.b   #BIT0, &P1OUT
+            bis.b   #BIT0, &P1DIR
+
+SetupTimerBO
+            bis.w   #TBCLR, &TB0CTL
+            bis.w   #TBSSEL__ACLK, &TB0CTL
+            bis.w   #MC__UP, &TB0CTL
+
+            mov.w   #32768, &TB0CCR0
+            bic.w   #CCIFG, &TB0CCTL0
+            bis.w   #CCIE, &TB0CCTL0
+
+            NOP
+            bis.w   #GIE, SR
+            NOP
 
 SetupP2     bic.b   #BIT0, &P1OUT
             bis.b   #BIT0, &P1DIR
