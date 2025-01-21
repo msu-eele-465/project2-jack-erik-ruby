@@ -3,3 +3,7 @@
 
 In this project, you'll bit-bang i2c and communicate with a real-time clock.
 
+## Reccomended functions for this project
+
+[!alt text](resources/Project02-functions.HEIC)
+
