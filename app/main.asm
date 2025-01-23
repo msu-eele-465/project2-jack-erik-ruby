@@ -89,7 +89,7 @@ i2c_init:
 
 i2c_start:  ; Falling edge on SDA, delay, falling edge on clock for start.
             bic.b   #SDA_PIN, SDA_OUT
-            delay_5us
+            delay_5us               ; Start hold time
             bic.b   #SCL_PIN, SCL_OUT
 
 i2c_stop:   ; Set SCL to high wait, then set SDA to high. This is because SDA-high needs a delay after we set SCL-high.
@@ -116,7 +116,7 @@ i2c_write:   ;(top-level function that would handle an entire write operation)
 
 i2c_read:    ;(top-level function that would handle an entire read operation)
 
-delay_5us   .marco
+delay_5us   .macro
             nop
             nop
             nop
