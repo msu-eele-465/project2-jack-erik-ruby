@@ -78,6 +78,36 @@ main:
             jmp main
             nop
 
+;------------------------------------------------------------------------------
+;           I2C Sub routines
+;------------------------------------------------------------------------------
+
+i2c_init:
+
+i2c_start:
+
+i2c_stop:
+
+i2c_tx_ack:
+
+i2c_rx_ack:
+
+i2c_tx_byte:
+
+i2c_rx_byte:
+
+i2c_sda_delay: ;(for satisfying setup and hold times)
+
+i2c_scl_delay: ;(for setting your clock period)
+
+i2c_send_address:
+
+i2c_write:   ;(top-level function that would handle an entire write operation)
+
+i2c_read:    ;(top-level function that would handle an entire read operation)
+
+
+
 
 
 
