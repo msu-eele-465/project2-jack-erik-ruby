@@ -146,6 +146,9 @@ set_up_delay
 
             dec.w   R6
             jnz     shift_tx
+            pop     R6
+            pop     R5
+            pop     R4
             ret
 
 
