@@ -28,15 +28,8 @@ SCL_DIR .equ P6DIR
 init:
             ; stop watchdog timer
             mov.w   #WDTPW+WDTHOLD,&WDTCTL
+            call   #i2c_init
             
-SetupSCLSDA            
-            mov.b   #00h, &P1SEL0           ; sets to digital IO
-            mov.b   #00h, &P1SEL1
-
-            bis.b   #SDA_PIN, SDA_DIR       ; set SDA and SCL as output
-            bis.b   #SCL_PIN, SCL_DIR 
-            bis.b   #SDA_PIN, SDA_OUT       ; set SDA and SCL to High
-            bis.b   #SCL_PIN, SCL_OUT
 
 SetupP2     bic.b   #BIT0, &P1OUT
             bis.b   #BIT0, &P1DIR
@@ -56,6 +49,7 @@ SetupTimerBO
 
 SetupP2     bic.b   #BIT0, &P1OUT
             bis.b   #BIT0, &P1DIR
+
 SetupTimerBO
             bis.w   #TBCLR, &TB0CTL
             bis.w   #TBSSEL__ACLK, &TB0CTL
@@ -73,6 +67,8 @@ SetupTimerBO
             bic.w   #LOCKLPM5,&PM5CTL0
 
 main:
+            call    #i2c_start
+            call    #i2c_stop
 
             nop 
             jmp main
@@ -82,11 +78,25 @@ main:
 ;           I2C Sub routines
 ;------------------------------------------------------------------------------
 
-i2c_init:
+i2c_init:          
+            mov.b   #00h, &P1SEL0           ; sets to digital IO
+            mov.b   #00h, &P1SEL1
 
-i2c_start:
+            bis.b   #SDA_PIN, SDA_DIR       ; set SDA and SCL as output
+            bis.b   #SCL_PIN, SCL_DIR 
+            bis.b   #SDA_PIN, SDA_OUT       ; set SDA and SCL to High
+            bis.b   #SCL_PIN, SCL_OUT
 
-i2c_stop:
+i2c_start:  ; Falling edge on SDA, delay, falling edge on clock for start.
+            bic.b   #SDA_PIN, SDA_OUT
+            delay_5us
+            bic.b   #SCL_PIN, SCL_OUT
+
+i2c_stop:   ; Set SCL to high wait, then set SDA to high. This is because SDA-high needs a delay after we set SCL-high.
+            bis.b   #SCL_PIN, SCL_OUT
+            delay_5us               ; Stop hold time
+            bis.b   #SDA_PIN, SCA_OUT
+            delay_5us               ; Buffer delay is 4.7usec min. Bus free time after stop before nect start cond.
 
 i2c_tx_ack:
 
@@ -105,6 +115,14 @@ i2c_send_address:
 i2c_write:   ;(top-level function that would handle an entire write operation)
 
 i2c_read:    ;(top-level function that would handle an entire read operation)
+
+delay_5us   .marco
+            nop
+            nop
+            nop
+            nop
+            nop
+            .endm
 
 
 
