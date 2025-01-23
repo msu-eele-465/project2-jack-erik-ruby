@@ -25,6 +25,19 @@ SCL_OUT .equ P6OUT
 SDA_DIR .equ P6DIR
 SCL_DIR .equ P6DIR  
 
+;------------------------------------------------------------------------------
+;           Macros
+;------------------------------------------------------------------------------
+
+delay_5us   .macro
+            nop
+            nop
+            nop
+            nop
+            nop
+            .endm
+
+
 init:
             ; stop watchdog timer
             mov.w   #WDTPW+WDTHOLD,&WDTCTL
@@ -47,25 +60,6 @@ SetupTimerBO
             bis.w   #GIE, SR
             NOP
 
-SetupP2     bic.b   #BIT0, &P1OUT
-            bis.b   #BIT0, &P1DIR
-
-SetupTimerBO
-            bis.w   #TBCLR, &TB0CTL
-            bis.w   #TBSSEL__ACLK, &TB0CTL
-            bis.w   #MC__UP, &TB0CTL
-
-            mov.w   #32768, &TB0CCR0
-            bic.w   #CCIFG, &TB0CCTL0
-            bis.w   #CCIE, &TB0CCTL0
-
-            NOP
-            bis.w   #GIE, SR
-            NOP
-
-            ; Disable low-power mode
-            bic.w   #LOCKLPM5,&PM5CTL0
-
 main:
             call    #i2c_start
             call    #i2c_stop
@@ -86,17 +80,20 @@ i2c_init:
             bis.b   #SCL_PIN, SCL_DIR 
             bis.b   #SDA_PIN, SDA_OUT       ; set SDA and SCL to High
             bis.b   #SCL_PIN, SCL_OUT
+            ret
 
 i2c_start:  ; Falling edge on SDA, delay, falling edge on clock for start.
             bic.b   #SDA_PIN, SDA_OUT
             delay_5us               ; Start hold time
             bic.b   #SCL_PIN, SCL_OUT
+            ret
 
 i2c_stop:   ; Set SCL to high wait, then set SDA to high. This is because SDA-high needs a delay after we set SCL-high.
             bis.b   #SCL_PIN, SCL_OUT
             delay_5us               ; Stop hold time
-            bis.b   #SDA_PIN, SCA_OUT
+            bis.b   #SDA_PIN, SDA_OUT
             delay_5us               ; Buffer delay is 4.7usec min. Bus free time after stop before nect start cond.
+            ret
 
 i2c_tx_ack:
 
@@ -116,13 +113,6 @@ i2c_write:   ;(top-level function that would handle an entire write operation)
 
 i2c_read:    ;(top-level function that would handle an entire read operation)
 
-delay_5us   .macro
-            nop
-            nop
-            nop
-            nop
-            nop
-            .endm
 
 
 
