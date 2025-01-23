@@ -18,12 +18,22 @@ RESET       mov.w   #__STACK_END,SP         ; Initialize stack pointer
 ;------------------------------------------------------------------------------
 ;           Constants
 ;------------------------------------------------------------------------------
+
 SDA_PIN .equ BIT0
 SCL_PIN .equ BIT2
 SDA_OUT .equ P6OUT
 SCL_OUT .equ P6OUT
 SDA_DIR .equ P6DIR
-SCL_DIR .equ P6DIR  
+SCL_DIR .equ P6DIR 
+
+;------------------------------------------------------------------------------
+;           Varaibles
+;------------------------------------------------------------------------------
+        .data
+
+tx_byte .space 1
+
+        .text
 
 ;------------------------------------------------------------------------------
 ;           Macros
@@ -63,6 +73,7 @@ SetupTimerBO
 main:
             call    #i2c_start
             call    #i2c_stop
+            call    #i2c_tx_byte
 
             nop 
             jmp main
@@ -100,6 +111,43 @@ i2c_tx_ack:
 i2c_rx_ack:
 
 i2c_tx_byte:
+
+            push    R4          ; Tx byte
+            push    R5          ; R/W bit (1/0)
+            push    R6          ; Counter to 8
+
+            mov.b   #8, R6
+            mov.b   #0x55, tx_byte
+            clr.b   R5
+
+            rla.b   tx_byte
+            bis.b   tx_byte, R5
+
+shift_tx
+            rlc.b   tx_byte 
+            jc      set_sda     ; check if carry has been set to 1
+
+
+clear_sda
+            bic.b   #SDA_PIN, SDA_OUT
+            jmp     set_up_delay
+
+set_sda
+            bis.b   #SDA_PIN, SDA_OUT
+
+set_up_delay
+
+            nop                 ; satisfy SDA setup time (min 250ns)
+            bis.b   #SCL_PIN, SCL_OUT
+            delay_5us
+            bic.b   #SCL_PIN, SCL_OUT
+
+            delay_5us           ; satisfy SDA hold time
+
+            dec.w   R6
+            jnz     shift_tx
+            ret
+
 
 i2c_rx_byte:
 
