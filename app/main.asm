@@ -68,12 +68,12 @@ SetupTimerBO
 
             NOP
             bis.w   #GIE, SR
-            NOP
+            nop
 
 main:
             call    #i2c_start
-            call    #i2c_stop
             call    #i2c_tx_byte
+            call    #i2c_stop
 
             nop 
             jmp main
