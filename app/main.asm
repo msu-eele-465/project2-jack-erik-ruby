@@ -66,12 +66,10 @@ SetupTimerBO
             bic.w   #CCIFG, &TB0CCTL0
             bis.w   #CCIE, &TB0CCTL0
 
-            nop
+            NOP
             bis.w   #GIE, SR
-            nop
+            NOP
 
-            call    #i2c_init
-            nop
 main:
             call    #i2c_start
             call    #i2c_stop
