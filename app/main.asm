@@ -66,9 +66,10 @@ SetupTimerBO
             bic.w   #CCIFG, &TB0CCTL0
             bis.w   #CCIE, &TB0CCTL0
 
-            NOP
+            nop
             bis.w   #GIE, SR
             nop
+            bic.w   #LOCKLPM5,&PM5CTL0
 
 main:
             call    #i2c_start
@@ -107,6 +108,16 @@ i2c_stop:   ; Set SCL to high wait, then set SDA to high. This is because SDA-hi
             ret
 
 i2c_tx_ack:
+            ;Hold SDA low in order to send ack
+            bic.b   #SCL_PIN, SCL_OUT
+            nop
+            bic.b   #SDA_PIN, SDA_OUT
+            delay_5us
+            bis.b   #SCL_PIN, SCL_OUT
+            delay_5us
+            bic.b   #SCL_PIN, SCL_OUT
+            ret
+
 
 i2c_rx_ack:
 
@@ -149,6 +160,7 @@ set_up_delay
             pop     R6
             pop     R5
             pop     R4
+            call    #i2c_tx_ack
             ret
 
 
