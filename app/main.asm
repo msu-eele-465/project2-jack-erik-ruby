@@ -104,6 +104,7 @@ i2c_start:  ; Falling edge on SDA, delay, falling edge on clock for start.
             ret
 
 i2c_stop:   ; Set SCL to high wait, then set SDA to high. This is because SDA-high needs a delay after we set SCL-high.
+            ;bic.b   #SDA_PIN, SDA_OUT
             bis.b   #SCL_PIN, SCL_OUT
             delay_5us               ; Stop hold time
             bis.b   #SDA_PIN, SDA_OUT
@@ -132,16 +133,16 @@ i2c_rx_ack:
             clr.w   R5
             mov.b   #SDA_PIN, R5        ; poll SDA input to see if NACK or ACK
             bic.b   #SCL_PIN, SCL_OUT   ; end clock pulse
-            cmp.b   #00h, R5            ; If 0, is ACK
-            jnz     ACK_NOT_REC 
-            bis.b   #SDA_PIN, SDA_DIR   ; Set SDA back to output
+            cmp.b   #00h, R5            ; If 0, is NACK
+            jz      ACK_NOT_REC 
             bic.b   #SDA_PIN, SDA_OUT   ; clear
+            bis.b   #SDA_PIN, SDA_DIR   ; Set SDA back to output
             pop     R5
             ret
 
 ACK_NOT_REC
-            call    #i2c_stop           ; If NACK, you can stop or send another start
             pop     R5
+            call    #i2c_stop           ; If NACK, you can stop or send another start
             ret
 
 i2c_tx_byte:
@@ -150,6 +151,7 @@ i2c_tx_byte:
             push    R5          ; R/W bit (1/0)
             push    R6          ; Counter to 8
 
+            clr.b   R6
             mov.b   #8, R6
             mov.b   #0x55, tx_byte
             clr.b   R5
