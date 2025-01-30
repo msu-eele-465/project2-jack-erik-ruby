@@ -141,51 +141,51 @@ i2c_tx_nack:
 
 i2c_rx_ack:
             ;Change SDA to an input after sending byte
-            bic.b   #SDA_PIN, SDA_DIR   ; switch to input
-            bis.b   #SDA_PIN, SDA_REN   ; enable resistor
-            bis.b   #SDA_PIN, SDA_OUT   ; set resistor to pullup 
-            bis.b   #SCL_PIN, SCL_OUT   ; Drive SCL high to begin clock pulse
+            bic.b   #SDA_PIN, SDA_DIR           ; switch to input
+            bis.b   #SDA_PIN, SDA_REN           ; enable resistor
+            bis.b   #SDA_PIN, SDA_OUT           ; set resistor to pullup 
+            bis.b   #SCL_PIN, SCL_OUT           ; Drive SCL high to begin clock pulse
             push    R5
             clr.w   R5
-            mov.b   #SDA_PIN, R5        ; poll SDA input to see if NACK or ACK
-            bic.b   #SCL_PIN, SCL_OUT   ; end clock pulse
-            bic.b   #SDA_PIN, SDA_OUT   ; set SDA to low (pulldown resistor in input mode)
-            bis.b   #SDA_PIN, SDA_DIR   ; Set SDA back to output
-            cmp.b   #00h, R5            ; Sets z if not equal
-            jz      ACK_NOT_REC         ; jump to NACK if not equal 
+            mov.b   #SDA_PIN, R5                ; poll SDA input to see if NACK or ACK
+            bic.b   #SCL_PIN, SCL_OUT           ; end clock pulse
+            bic.b   #SDA_PIN, SDA_OUT           ; set SDA to low (pulldown resistor in input mode)
+            bis.b   #SDA_PIN, SDA_DIR           ; Set SDA back to output
+            cmp.b   #00h, R5                    ; Sets z if not equal
+            jz      ACK_NOT_REC                 ; jump to NACK if not equal 
             pop     R5
             ret
 
 ACK_NOT_REC
             pop     R5
-            call    #i2c_stop           ; If NACK, you can stop or send another start
+            call    #i2c_stop                   ; If NACK, you can stop or send another start
             ret
 
 i2c_tx_byte:
             push    R6          
             clr.b   R6
-            mov.b   #8, R6              ; Counter to 8 bits
+            mov.b   #8, R6                      ; Counter to 8 bits
 shift_tx
             rlc.b   tx_byte 
-            jc      set_sda             ; check if carry has been set to 1
+            jc      set_sda                     ; check if carry has been set to 1
 clear_sda
             bic.b   #SDA_PIN, SDA_OUT
-            jmp     set_up_delay        ; skip setting SDA if carry (transmitting bit is 0)
+            jmp     set_up_delay                ; skip setting SDA if carry (transmitting bit is 0)
 
 set_sda
             bis.b   #SDA_PIN, SDA_OUT
 set_up_delay
-            nop                         ; satisfy SDA setup time (min 250ns)
-            bis.b   #SCL_PIN, SCL_OUT   ; pulse clock
+            nop                                 ; satisfy SDA setup time (min 250ns)
+            bis.b   #SCL_PIN, SCL_OUT           ; pulse clock
             delay_5us
             bic.b   #SCL_PIN, SCL_OUT
 
-            delay_5us                   ; satisfy SDA hold time
+            delay_5us                           ; satisfy SDA hold time
 
             dec.w   R6
             jnz     shift_tx
             pop     R6
-            call    #i2c_rx_ack         ; listen for an ACK or NACK from slave
+            call    #i2c_rx_ack                 ; listen for an ACK or NACK from slave
             ret
 
 i2c_rx_byte:
@@ -193,26 +193,26 @@ i2c_rx_byte:
             push    R5
             clr.b   R5
             clr.b   R6
-            mov.b   #8, R6              ; Counter to 8 bits
+            mov.b   #8, R6                      ; Counter to 8 bits
 
 shift_rx
-            nop                         ; satisfy SDA setup time (min 250ns)
+            nop                                 ; satisfy SDA setup time (min 250ns)
             bis.b   #SCL_PIN, SCL_OUT
-            mov.b   #SDA_PIN, R5        ; poll SDA input to see what the bit is
+            mov.b   #SDA_PIN, R5                ; poll SDA input to see what the bit is
             delay_5us
-            bic.b   #SCL_PIN, SCL_OUT   ; end clock pulse
-            bis.b   R5, rx_byte         ; set bit 0 of rx_byte to R5 (read bit)
+            bic.b   #SCL_PIN, SCL_OUT           ; end clock pulse
+            bis.b   R5, rx_byte                 ; set bit 0 of rx_byte to R5 (read bit)
             rla.b   rx_byte
-            delay_5us                   ; satisfy SDA hold time?
+            delay_5us                           ; satisfy SDA hold time?
             dec.w   R6
-            jnz     shift_rx            ; run until 8 bits have been recieved
+            jnz     shift_rx                    ; run until 8 bits have been recieved
 
             pop     R5
             pop     R6
             ;Change SDA to an output
             bis.b   #SDA_PIN, SDA_DIR 
-            bic.b   #SDA_PIN, SDA_OUT   ; set SDA low 
-            call    #i2c_tx_ack         ; send an acknowledge
+            bic.b   #SDA_PIN, SDA_OUT           ; set SDA low 
+            call    #i2c_tx_ack         ;        send an acknowledge
 
             ret
 
@@ -228,22 +228,22 @@ i2c_write:   ;(top-level function that would handle an entire write operation)
             clr.w   R7
             mov.b   #55h, tx_byte
             rla.b   tx_byte 
-            call    #i2c_tx_byte        ; transmit address
+            call    #i2c_tx_byte                ; transmit address
 
-SEND_ANOTHER                            ; transmit 0-9
+SEND_ANOTHER                                    ; transmit 0-9
             mov.b   R7, tx_byte
             call    #i2c_tx_byte
             inc.b   R7
             cmp.b   #10d, R7
-            jnz     SEND_ANOTHER        ; loops until 9 has been sent
+            jnz     SEND_ANOTHER                ; loops until 9 has been sent
             pop     R7  
-            call    #i2c_stop           ; sends stop condition
+            call    #i2c_stop                   ; sends stop condition
             ret           
 
 i2c_read:    ;(top-level function that would handle an entire read operation)
             call    #i2c_start
             push    R7
-            push    R5                  ; 1/0 (R/W) bit
+            push    R5                          ; 1/0 (R/W) bit
             clr.w   R7
             clr.w   R5
 
@@ -251,7 +251,7 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             ; mov.b   #55h, tx_byte
             ; rla.b   tx_byte
             ; bis.b   tx_byte, R5 
-            ; call    #i2c_tx_byte ; transmit address
+            ; call    #i2c_tx_byte              ; transmit address
 
             ; ; call a start      (RTC)
             ; call    #i2c_start
@@ -261,19 +261,19 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             rla.b   tx_byte
             mov.b   #1d, R5
             bis.b   R5, tx_byte 
-            call    #i2c_tx_byte        ; transmit address
+            call    #i2c_tx_byte                ; transmit address
             call    #i2c_rx_ack
             
             ;Change SDA to an input
             bic.b   #SDA_PIN, SDA_DIR   
-            bis.b   #SDA_PIN, SDA_REN   ; turn on resistor
-            bis.b   #SDA_PIN, SDA_OUT   ; set to pullup resistor
+            bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
+            bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             
-            mov.b   #02h, R7            ; loop variable; read 2 bytes
+            mov.b   #02h, R7                    ; loop variable; read 2 bytes
 READ_LOOP
-            bic.b   #SDA_PIN, SDA_DIR   ;Change SDA to an input
-            bis.b   #SDA_PIN, SDA_REN   ; turn on resistor
-            bis.b   #SDA_PIN, SDA_OUT   ; set to pullup resistor
+            bic.b   #SDA_PIN, SDA_DIR           ;Change SDA to an input
+            bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
+            bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             call    #i2c_rx_byte
             call    #i2c_tx_ack
             dec.b   R7
