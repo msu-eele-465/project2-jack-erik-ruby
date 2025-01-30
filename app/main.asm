@@ -24,7 +24,8 @@ SCL_PIN .equ BIT2
 SDA_OUT .equ P6OUT
 SCL_OUT .equ P6OUT
 SDA_DIR .equ P6DIR
-SCL_DIR .equ P6DIR 
+SCL_DIR .equ P6DIR
+SDA_REN .equ P6REN 
 
 ;------------------------------------------------------------------------------
 ;           Varaibles
@@ -74,6 +75,8 @@ SetupTimerBO
 main:
             call    #i2c_start
             call    #i2c_tx_byte
+            call    #i2c_tx_byte
+            call    #i2c_tx_byte
             call    #i2c_stop
 
             nop 
@@ -120,6 +123,26 @@ i2c_tx_ack:
 
 
 i2c_rx_ack:
+            ;Change SDA to an input after sending byte
+            bic.b   #SDA_PIN, SDA_DIR   ; enable resistor
+            bis.b   #SDA_PIN, SDA_REN   ; SDA is connected to a pullup ressitor (turns on)
+            bis.b   #SDA_PIN, SDA_OUT   ; Pullup resistor
+            bis.b   #SCL_PIN, SCL_OUT   ; Drive SCL high to begin clock pulse
+            push    R5
+            clr.w   R5
+            mov.b   #SDA_PIN, R5        ; poll SDA input to see if NACK or ACK
+            bic.b   #SCL_PIN, SCL_OUT   ; end clock pulse
+            cmp.b   #00h, R5            ; If 0, is ACK
+            jnz     ACK_NOT_REC 
+            bis.b   #SDA_PIN, SDA_DIR   ; Set SDA back to output
+            bic.b   #SDA_PIN, SDA_OUT   ; clear
+            pop     R5
+            ret
+
+ACK_NOT_REC
+            call    #i2c_stop           ; If NACK, you can stop or send another start
+            pop     R5
+            ret
 
 i2c_tx_byte:
 
@@ -160,7 +183,7 @@ set_up_delay
             pop     R6
             pop     R5
             pop     R4
-            call    #i2c_tx_ack
+            call    #i2c_rx_ack
             ret
 
 
@@ -173,6 +196,7 @@ i2c_scl_delay: ;(for setting your clock period)
 i2c_send_address:
 
 i2c_write:   ;(top-level function that would handle an entire write operation)
+
 
 i2c_read:    ;(top-level function that would handle an entire read operation)
 
