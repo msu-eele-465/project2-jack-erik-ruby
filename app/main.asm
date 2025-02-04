@@ -82,6 +82,7 @@ main:
             
             ;call    #i2c_write
             call    #i2c_read
+            ; call    #i2c_tx_ack
         
             nop 
             jmp main
@@ -262,7 +263,6 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             mov.b   #1d, R5
             bis.b   R5, tx_byte 
             call    #i2c_tx_byte                ; transmit address
-            call    #i2c_rx_ack
             
             ;Change SDA to an input
             bic.b   #SDA_PIN, SDA_DIR   
@@ -271,13 +271,12 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             
             mov.b   #02h, R7                    ; loop variable; read 2 bytes
 READ_LOOP
-            bic.b   #SDA_PIN, SDA_DIR           ;Change SDA to an input
+            bic.b   #SDA_PIN, SDA_DIR           ; Change SDA to an input
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             call    #i2c_rx_byte
-            call    #i2c_tx_ack
             dec.b   R7
-            ;jnz     READ_LOOP
+            jnz     READ_LOOP
 
             pop     R5 
             pop     R7
