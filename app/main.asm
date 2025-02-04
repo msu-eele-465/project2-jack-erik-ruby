@@ -95,6 +95,7 @@ i2c_init:
             mov.b   #00h, &P1SEL0               ; sets to digital IO
             mov.b   #00h, &P1SEL1
 
+            clr.b   P6OUT     
             bis.b   #SDA_PIN, SDA_DIR           ; set SDA and SCL as output
             bis.b   #SCL_PIN, SCL_DIR 
             bis.b   #SDA_PIN, SDA_OUT           ; set SDA and SCL to High
@@ -118,6 +119,7 @@ i2c_stop:   ; Set SCL to high wait, then set SDA to high for stop
 i2c_tx_ack:
             ;Hold SDA low in order to send ack
             bis.b   #SDA_PIN, SDA_DIR           ; make sure SDA is an output
+            bic.b   #SDA_PIN, SDA_OUT
             bic.b   #SCL_PIN, SCL_OUT
             nop
             bic.b   #SDA_PIN, SDA_OUT
@@ -129,7 +131,7 @@ i2c_tx_ack:
 
 i2c_tx_nack:
             bis.b   #SDA_PIN, SDA_DIR           ; make sure SDA is an output
-            ;Hold SDA low in order to send NACK
+            ;Hold SDA high in order to send NACK
             bic.b   #SCL_PIN, SCL_OUT
             nop
             bis.b   #SDA_PIN, SDA_OUT
@@ -268,28 +270,31 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             
-            mov.b   #03h, R7                    ; loop variable; read 2 bytes
+            mov.b   #04h, R7                    ; loop variable; read 2 bytes
 READ_LOOP
             bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             call    #i2c_rx_byte
             dec.b   R7
-            cmp.b   #1, R7                      ; Second to last byte
+            cmp.b   #0, R7                      ; Second to last byte
             jz      LAST_BYTE
 
             call    #i2c_tx_ack                 ; send an acknowledge  
             jmp     READ_LOOP
 
 LAST_BYTE
+            bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input
+            bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
+            bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             call    #i2c_rx_byte
-            call    #i2c_tx_ack
             call    #i2c_tx_nack
 
             pop     R5 
             pop     R7
             ;Change SDA to an output
             bis.b   #SDA_PIN, SDA_DIR
+            bic.b   #SDA_PIN, SDA_OUT
             call    #i2c_stop
             ret
 
