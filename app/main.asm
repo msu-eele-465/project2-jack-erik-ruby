@@ -82,7 +82,6 @@ main:
             
             ;call    #i2c_write
             call    #i2c_read
-            ; call    #i2c_tx_ack
         
             nop 
             jmp main
@@ -195,6 +194,7 @@ i2c_rx_byte:
             clr.b   R5
             clr.b   R6
             mov.b   #8, R6                      ; Counter to 8 bits
+            bic.b   #SDA_PIN, SDA_DIR           ; Change SDA to an input
 
 shift_rx
             nop                                 ; satisfy SDA setup time (min 250ns)
@@ -213,7 +213,6 @@ shift_rx
             ;Change SDA to an output
             bis.b   #SDA_PIN, SDA_DIR 
             bic.b   #SDA_PIN, SDA_OUT           ; set SDA low 
-            call    #i2c_tx_ack         ;        send an acknowledge
 
             ret
 
@@ -261,28 +260,34 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             mov.b   #55h, tx_byte
             rla.b   tx_byte
             mov.b   #1d, R5
-            bis.b   R5, tx_byte 
+            bis.b   R5, tx_byte
+            bis.b   #SDA_PIN, SDA_DIR           ; Set SDA to output
             call    #i2c_tx_byte                ; transmit address
             
-            ;Change SDA to an input
-            bic.b   #SDA_PIN, SDA_DIR   
+            bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input   
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             
             mov.b   #02h, R7                    ; loop variable; read 2 bytes
 READ_LOOP
-            bic.b   #SDA_PIN, SDA_DIR           ; Change SDA to an input
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             call    #i2c_rx_byte
             dec.b   R7
-            jnz     READ_LOOP
+            cmp.b   #1, R7                      ; Second to last byte
+            jz      LAST_BYTE
+
+            call    #i2c_tx_ack                 ; send an acknowledge  
+            jmp     READ_LOOP
+
+LAST_BYTE
+            call    #i2c_rx_byte
+            call    #i2c_tx_nack
 
             pop     R5 
             pop     R7
             ;Change SDA to an output
-            bis.b   #SDA_PIN, SDA_DIR   
-            call    #i2c_tx_nack
+            bis.b   #SDA_PIN, SDA_DIR
             call    #i2c_stop
             ret
 
