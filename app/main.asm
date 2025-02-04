@@ -268,8 +268,9 @@ i2c_read:    ;(top-level function that would handle an entire read operation)
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             
-            mov.b   #02h, R7                    ; loop variable; read 2 bytes
+            mov.b   #03h, R7                    ; loop variable; read 2 bytes
 READ_LOOP
+            bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input
             bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
             bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
             call    #i2c_rx_byte
@@ -282,6 +283,7 @@ READ_LOOP
 
 LAST_BYTE
             call    #i2c_rx_byte
+            call    #i2c_tx_ack
             call    #i2c_tx_nack
 
             pop     R5 
