@@ -39,7 +39,9 @@ rx_byte .space 1
 
 hours   .space 1
 min     .space 1
-sec    .space 1
+sec     .space 1
+
+; rtc_reg .space 1
 
         .text
 
@@ -275,7 +277,8 @@ i2c_read:
             mov.b   #00h, tx_byte        ; Start reading from register 0
             call    #i2c_tx_byte         ; Send register address
             
-            ; Repeated start
+            ; Repeated start (or stop and then start)
+            call    #i2c_stop
             call    #i2c_start
             
             ; Send device address with read bit (1)
@@ -286,21 +289,31 @@ i2c_read:
             call    #i2c_tx_byte         ; Send address + read bit
 
             ; Rest of your reading code remains the same
-            mov.b   #04h, R7             ; Number of bytes to read
+            mov.b   #03h, R7             ; Number of bytes to read
 READ_LOOP
             bic.b   #SDA_PIN, SDA_DIR    
             bis.b   #SDA_PIN, SDA_REN    
             bis.b   #SDA_PIN, SDA_OUT    
             call    #i2c_rx_byte
-        ;     mov.b   #02h, rx_byte
             dec.b   R7
+            cmp.b   #2, R7
+            jz      secLabel
+            cmp.b   #1, R7
+            jz      minLabel
             cmp.b   #0, R7               
             jz      LAST_BYTE
 
+secLabel
+            mov.b  rx_byte, sec  
+            jmp    rightLabel  
+minLabel
+            mov.b  rx_byte, min  
+rightLabel
             call    #i2c_tx_ack          
             jmp     READ_LOOP
 
 LAST_BYTE
+            mov.b  rx_byte, hours  
             call    #i2c_tx_nack
 
             pop     R5 
