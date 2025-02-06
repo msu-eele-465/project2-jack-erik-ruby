@@ -40,8 +40,8 @@ rx_byte .space 1
 hours   .space 1
 min     .space 1
 sec     .space 1
-
-; rtc_reg .space 1
+temp_msb .space 1    ; Add this for temperature MSB
+temp_lsb .space 1    ; Add this for temperature LSB
 
         .text
 
@@ -261,7 +261,7 @@ SEND_ANOTHER                                    ; transmit 0-9
             call    #i2c_stop                   ; sends stop condition
             ret           
 
-i2c_read:    
+i2c_read:    ;(top-level function that would handle an entire read operation)
             call    #i2c_start
             push    R7
             push    R5                    
@@ -269,27 +269,27 @@ i2c_read:
             clr.w   R5
 
             ; Send device address with write bit (0)
-            mov.b   #68h, tx_byte        ; DS3231 address
-            rla.b   tx_byte              ; Shift left to make room for R/W bit
-            call    #i2c_tx_byte         ; Send address + write bit
+            mov.b   #68h, tx_byte               ; DS3231 address
+            rla.b   tx_byte                     ; Shift left to make room for R/W bit
+            call    #i2c_tx_byte                ; Send address + write bit
             
             ; Send register address we want to read from (e.g., 0x00 for seconds)
-            mov.b   #00h, tx_byte        ; Start reading from register 0
-            call    #i2c_tx_byte         ; Send register address
+            mov.b   #00h, tx_byte               ; Start reading from register 0
+            call    #i2c_tx_byte                ; Send register address
             
             ; Repeated start (or stop and then start)
             call    #i2c_stop
             call    #i2c_start
             
             ; Send device address with read bit (1)
-            mov.b   #68h, tx_byte        ; DS3231 address again
-            rla.b   tx_byte              ; Shift left to make room for R/W bit
+            mov.b   #68h, tx_byte               ; DS3231 address again
+            rla.b   tx_byte                     ; Shift left to make room for R/W bit
             mov.b   #1d, R5
-            bis.b   R5, tx_byte          ; Set read bit
-            call    #i2c_tx_byte         ; Send address + read bit
+            bis.b   R5, tx_byte                 ; Set read bit
+            call    #i2c_tx_byte                ; Send address + read bit
 
             ; Rest of your reading code remains the same
-            mov.b   #03h, R7             ; Number of bytes to read
+            mov.b   #03h, R7                    ; Number of bytes to read
 READ_LOOP
             bic.b   #SDA_PIN, SDA_DIR    
             bis.b   #SDA_PIN, SDA_REN    
@@ -304,21 +304,61 @@ READ_LOOP
             jz      LAST_BYTE
 
 secLabel
-            mov.b  rx_byte, sec  
-            jmp    rightLabel  
+            mov.b   rx_byte, sec  
+            jmp     rightLabel  
 minLabel
-            mov.b  rx_byte, min  
+            mov.b   rx_byte, min  
 rightLabel
             call    #i2c_tx_ack          
             jmp     READ_LOOP
 
 LAST_BYTE
-            mov.b  rx_byte, hours  
+            mov.b   rx_byte, hours  
             call    #i2c_tx_nack
+            call    #i2c_stop
+
+            ; Now read temperature registers
+            call    #i2c_start
+            
+            ; Send device address with write bit (0)
+            mov.b   #68h, tx_byte               ; DS3231 address
+            rla.b   tx_byte                     ; Shift left to make room for R/W bit
+            call    #i2c_tx_byte                ; Send address + write bit
+            
+            ; Send register address for temperature (0x11)
+            mov.b   #11h, tx_byte               ; Temperature MSB register
+            call    #i2c_tx_byte                ; Send register address
+            
+            ; Repeated start (or stop and then start)
+            call    #i2c_stop
+            call    #i2c_start
+            
+            ; Send device address with read bit (1)
+            mov.b   #68h, tx_byte               ; DS3231 address again
+            rla.b   tx_byte                     ; Shift left to make room for R/W bit
+            mov.b   #1d, R5
+            bis.b   R5, tx_byte                 ; Set read bit
+            call    #i2c_tx_byte                ; Send address + read bit
+
+            ; Read temperature MSB
+            bic.b   #SDA_PIN, SDA_DIR           ; Change SDA to an input after sending byte
+            bis.b   #SDA_PIN, SDA_REN           ; enable resistor
+            bis.b   #SDA_PIN, SDA_OUT           ; set resistor to pullup 
+            call    #i2c_rx_byte
+            mov.b   rx_byte, temp_msb
+            call    #i2c_tx_ack                 ; send an acknowledge
+
+            ; Read temperature LSB
+            bic.b   #SDA_PIN, SDA_DIR           ; Change SDA to an input after sending byte
+            bis.b   #SDA_PIN, SDA_REN           ; enable resistor
+            bis.b   #SDA_PIN, SDA_OUT           ; set resistor to pullup 
+            call    #i2c_rx_byte
+            mov.b   rx_byte, temp_lsb
+            call    #i2c_tx_nack                ; send NACK for last byte
 
             pop     R5 
             pop     R7
-            call    #i2c_stop
+            call    #i2c_stop                   ; sends stop condition
             ret
 
 ;------------------------------------------------------------------------------
