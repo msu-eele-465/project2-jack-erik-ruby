@@ -109,7 +109,8 @@ i2c_start:  ; Falling edge on SDA, delay, falling edge on clock for start.
             ret
 
 i2c_stop:   ; Set SCL to high wait, then set SDA to high for stop
-            ; bis.b   #SDA_PIN, SDA_OUT           ; HMMMMMMMMMM
+            bis.b   #SDA_PIN, SDA_DIR
+            bic.b   #SDA_PIN, SDA_OUT
             bis.b   #SCL_PIN, SCL_OUT
             delay_5us                           ; Stop hold time
             bis.b   #SDA_PIN, SDA_OUT
@@ -284,17 +285,10 @@ READ_LOOP
             jmp     READ_LOOP
 
 LAST_BYTE
-            bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input
-            bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
-            bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
-            call    #i2c_rx_byte
             call    #i2c_tx_nack
 
             pop     R5 
             pop     R7
-            ;Change SDA to an output
-            bis.b   #SDA_PIN, SDA_DIR
-            bic.b   #SDA_PIN, SDA_OUT
             call    #i2c_stop
             ret
 
