@@ -243,45 +243,44 @@ SEND_ANOTHER                                    ; transmit 0-9
             call    #i2c_stop                   ; sends stop condition
             ret           
 
-i2c_read:    ;(top-level function that would handle an entire read operation)
+i2c_read:    
             call    #i2c_start
             push    R7
-            push    R5                          ; 1/0 (R/W) bit
+            push    R5                    
             clr.w   R7
             clr.w   R5
 
-            ; Transmit a write with the address (RTC)
-            ; mov.b   #55h, tx_byte
-            ; rla.b   tx_byte
-            ; bis.b   tx_byte, R5 
-            ; call    #i2c_tx_byte              ; transmit address
-
-            ; ; call a start      (RTC)
-            ; call    #i2c_start
-
-            ; send the slave address again with R/W set to R
-            mov.b   #55h, tx_byte
-            rla.b   tx_byte
+            ; Send device address with write bit (0)
+            mov.b   #68h, tx_byte        ; DS3231 address
+            rla.b   tx_byte              ; Shift left to make room for R/W bit
+            call    #i2c_tx_byte         ; Send address + write bit
+            
+            ; Send register address we want to read from (e.g., 0x00 for seconds)
+            mov.b   #00h, tx_byte        ; Start reading from register 0
+            call    #i2c_tx_byte         ; Send register address
+            
+            ; Repeated start
+            call    #i2c_start
+            
+            ; Send device address with read bit (1)
+            mov.b   #68h, tx_byte        ; DS3231 address again
+            rla.b   tx_byte              ; Shift left to make room for R/W bit
             mov.b   #1d, R5
-            bis.b   R5, tx_byte
-            bis.b   #SDA_PIN, SDA_DIR           ; Set SDA to output
-            call    #i2c_tx_byte                ; transmit address
-            
-            bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input   
-            bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
-            bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
-            
-            mov.b   #04h, R7                    ; loop variable; read 2 bytes
+            bis.b   R5, tx_byte          ; Set read bit
+            call    #i2c_tx_byte         ; Send address + read bit
+
+            ; Rest of your reading code remains the same
+            mov.b   #04h, R7             ; Number of bytes to read
 READ_LOOP
-            bic.b   #SDA_PIN, SDA_DIR           ; Set SDA to input
-            bis.b   #SDA_PIN, SDA_REN           ; turn on resistor
-            bis.b   #SDA_PIN, SDA_OUT           ; set to pullup resistor
+            bic.b   #SDA_PIN, SDA_DIR    
+            bis.b   #SDA_PIN, SDA_REN    
+            bis.b   #SDA_PIN, SDA_OUT    
             call    #i2c_rx_byte
             dec.b   R7
-            cmp.b   #0, R7                      ; Second to last byte
+            cmp.b   #0, R7               
             jz      LAST_BYTE
 
-            call    #i2c_tx_ack                 ; send an acknowledge  
+            call    #i2c_tx_ack          
             jmp     READ_LOOP
 
 LAST_BYTE
