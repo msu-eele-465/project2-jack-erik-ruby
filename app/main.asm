@@ -41,7 +41,8 @@ hours   .space 1
 min     .space 1
 sec     .space 1
 
-; rtc_reg .space 1
+temp_msb .space 1
+temp_lsb .space 1
 
         .text
 
@@ -84,7 +85,9 @@ SetupTimerBO
 main:
             
             ;call    #i2c_write
-            call    #i2c_read
+            ;call    #i2c_read
+
+            call    #i2c_read_temperature
         
             nop 
             jmp main
@@ -269,27 +272,27 @@ i2c_read:
             clr.w   R5
 
             ; Send device address with write bit (0)
-            mov.b   #68h, tx_byte        ; DS3231 address
-            rla.b   tx_byte              ; Shift left to make room for R/W bit
-            call    #i2c_tx_byte         ; Send address + write bit
+            mov.b   #68h, tx_byte               ; DS3231 address
+            rla.b   tx_byte                     ; Shift left to make room for R/W bit
+            call    #i2c_tx_byte                ; Send address + write bit
             
             ; Send register address we want to read from (e.g., 0x00 for seconds)
-            mov.b   #00h, tx_byte        ; Start reading from register 0
-            call    #i2c_tx_byte         ; Send register address
+            mov.b   #00h, tx_byte               ; Start reading from register 0
+            call    #i2c_tx_byte                ; Send register address
             
             ; Repeated start (or stop and then start)
             call    #i2c_stop
             call    #i2c_start
             
             ; Send device address with read bit (1)
-            mov.b   #68h, tx_byte        ; DS3231 address again
-            rla.b   tx_byte              ; Shift left to make room for R/W bit
+            mov.b   #68h, tx_byte               ; DS3231 address again
+            rla.b   tx_byte                     ; Shift left to make room for R/W bit
             mov.b   #1d, R5
-            bis.b   R5, tx_byte          ; Set read bit
-            call    #i2c_tx_byte         ; Send address + read bit
+            bis.b   R5, tx_byte                 ; Set read bit
+            call    #i2c_tx_byte                ; Send address + read bit
 
             ; Rest of your reading code remains the same
-            mov.b   #03h, R7             ; Number of bytes to read
+            mov.b   #03h, R7                    ; Number of bytes to read
 READ_LOOP
             bic.b   #SDA_PIN, SDA_DIR    
             bis.b   #SDA_PIN, SDA_REN    
@@ -314,6 +317,48 @@ rightLabel
 
 LAST_BYTE
             mov.b  rx_byte, hours  
+            call   #i2c_tx_nack
+
+            pop     R5 
+            pop     R7
+            call    #i2c_stop
+            ret
+
+i2c_read_temperature:
+            call    #i2c_start
+            push    R7
+            push    R5                    
+            clr.w   R7
+            clr.w   R5
+
+            ; Send device address with write bit (0)
+            mov.b   #0xD0, tx_byte              ; DS3231 address with write bit (0)
+            call    #i2c_tx_byte                ; Send address + write bit
+            
+            ; Send register address for temperature MSB (0x11)
+            mov.b   #0x11, tx_byte              ; Temperature MSB register
+            call    #i2c_tx_byte                ; Send register address
+            
+            ; Repeated start condition
+            call    #i2c_stop
+            call    #i2c_start
+            
+            ; Send device address with read bit (1)
+            mov.b   #0xD1, tx_byte              ; DS3231 address with read bit (1)
+            call    #i2c_tx_byte                ; Send address + read bit
+
+            ; Read temperature MSB (0x11)
+            call    #i2c_rx_byte
+            mov.b   rx_byte, temp_msb           ; Store MSB
+
+            ; Send ACK
+            call    #i2c_tx_ack
+
+            ; Read temperature LSB (0x12)
+            call    #i2c_rx_byte
+            mov.b   rx_byte, temp_lsb           ; Store LSB
+
+            ; Send NACK to end read
             call    #i2c_tx_nack
 
             pop     R5 
