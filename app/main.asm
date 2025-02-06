@@ -26,6 +26,7 @@ SCL_OUT .equ P6OUT
 SDA_DIR .equ P6DIR
 SCL_DIR .equ P6DIR
 SDA_REN .equ P6REN 
+SDA_IN  .equ P6IN
 
 ;------------------------------------------------------------------------------
 ;           Varaibles
@@ -194,28 +195,43 @@ set_up_delay
 i2c_rx_byte:
             push    R6                  
             push    R5
+            push    R8
             clr.b   R5
             clr.b   R6
+            clr.b   R8
             mov.b   #8, R6                      ; Counter to 8 bits
             bic.b   #SDA_PIN, SDA_DIR           ; Change SDA to an input
 
 shift_rx
             nop                                 ; satisfy SDA setup time (min 250ns)
+            clr.b   R5
             bis.b   #SCL_PIN, SCL_OUT
-            mov.b   #SDA_PIN, R5                ; poll SDA input to see what the bit is
+            cmp.b   #04h, &SDA_IN               ; poll SDA input to see what the bit is
+            jz      recievedZero     
+            bis.b   #01h, R8
+            jmp     recievedOne
+recievedZero 
+            bic.b   #01h, R8
+recievedOne
             delay_5us
+
             bic.b   #SCL_PIN, SCL_OUT           ; end clock pulse
-            bis.b   R5, rx_byte                 ; set bit 0 of rx_byte to R5 (read bit)
-            rla.b   rx_byte
+            clrc                                ; clear carry bit
+            rlc.b   R8
             delay_5us                           ; satisfy SDA hold time?
             dec.w   R6
             jnz     shift_rx                    ; run until 8 bits have been recieved
+            
 
+            clrc                                ; clear carry bit
+            rrc.b   R8
+            mov.b   R8, rx_byte
+            pop     R8
             pop     R5
             pop     R6
             ;Change SDA to an output
             bis.b   #SDA_PIN, SDA_DIR 
-            bic.b   #SDA_PIN, SDA_OUT           ; set SDA low 
+            bic.b   #SDA_PIN, SDA_OUT           ; set SDA low
 
             ret
 
@@ -276,6 +292,7 @@ READ_LOOP
             bis.b   #SDA_PIN, SDA_REN    
             bis.b   #SDA_PIN, SDA_OUT    
             call    #i2c_rx_byte
+        ;     mov.b   #02h, rx_byte
             dec.b   R7
             cmp.b   #0, R7               
             jz      LAST_BYTE
