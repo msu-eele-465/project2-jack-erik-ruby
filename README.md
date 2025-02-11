@@ -21,16 +21,20 @@ i2c_tx_nack
 ```
 On `i2c_start`, `i2c_read` will send the address byte of the slave device with a write bit (0). The program will receive three bytes of data from the slave's seconds, minutes, and hours registers. These values will be saved to the appropriate variables when received. The program will send a nack when the final byte is received.
 
-> [!NOTE]
-> Include screenshots here
+### Start Stop Bit
+![start stop](resources/startStop.png)
 
-## Temperature reading
+### Address W/R Bit
+![alt text](resources/addressWR.png)
+
+### Transmission
+Full transmission
+![alt text](resources/fullTransmission.png)
+
+2-3 Bytes of Data
+![alt text](resources/zoomedInData.png)
+
+## Temperature Reading
 This calls `i2c_read_temperature`, which fundamentally does the same thing as `i2c_read`, but will read from the temperature registers instead. The temperature values, encoded in 2's complement HEX, are saved in variables as well. This can be converted to decimal, then from Celsius to Fahenheit using Google.
 
 Room temperature is about 20-22°C (68-72°F).
-
-> [!IMPORTANT]
-> Show a screen shot of the start-bit, Address+W/R bit, stop-bit
-> Show a screen shot of the full transmission (start, Address, data, stop)
-> Show a zoomed in screen shot of 2 to 3 data bytes
-> Temperature conversion
