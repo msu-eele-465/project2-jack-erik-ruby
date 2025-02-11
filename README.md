@@ -27,6 +27,8 @@ On `i2c_start`, `i2c_read` will send the address byte of the slave device with a
 ## Temperature reading
 This calls `i2c_read_temperature`, which fundamentally does the same thing as `i2c_read`, but will read from the temperature registers instead. The temperature values, encoded in 2's complement HEX, are saved in variables as well. This can be converted to decimal, then from Celsius to Fahenheit using Google.
 
+Room temperature is about 20-22°C (68-72°F).
+
 > [!IMPORTANT]
 > Show a screen shot of the start-bit, Address+W/R bit, stop-bit
 > Show a screen shot of the full transmission (start, Address, data, stop)
