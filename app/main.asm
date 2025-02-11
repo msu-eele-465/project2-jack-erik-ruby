@@ -44,6 +44,7 @@ sec     .space 1
 temp_msb .space 1
 temp_lsb .space 1
 
+read_type .space 1
         .text
 
 ;------------------------------------------------------------------------------
@@ -63,6 +64,7 @@ init:
             ; stop watchdog timer
             mov.w   #WDTPW+WDTHOLD,&WDTCTL
             call   #i2c_init
+            clr.b   read_type
             
 
 SetupP2     bic.b   #BIT0, &P1OUT
@@ -85,8 +87,13 @@ SetupTimerBO
 main:
             
             ;call    #i2c_write
-            ;call    #i2c_read
-
+            cmp.b   #0, read_type
+            jz      READ_TEMP
+            call    #i2c_read
+            nop 
+            jmp main
+            nop
+READ_TEMP
             call    #i2c_read_temperature
         
             nop 
@@ -372,6 +379,12 @@ i2c_read_temperature:
 HeartbeatLED:
             xor.b   #BIT0, &P1OUT
             bic.w   #CCIFG, &TB0CCTL0
+            inc.b   R9
+            cmp.b   #5,R9
+            jnz      dont_switch_read
+            xor.b   #BIT0, read_type
+            clr.b   R9
+dont_switch_read
             reti
 
 ;------------------------------------------------------------------------------
